@@ -1,18 +1,12 @@
+#!/usr/bin/env bash
+set -ex
 # Initialize variables
 # Run 'doctl compute region list' for a list of available regions
-REGION=blr1
+REGION=ams3
 
-# Download DigitalOcean CLI
-curl -OL https://github.com/digitalocean/doctl/releases/download/v1.6.0/doctl-1.6.0-darwin-10.6-amd64.tar.gz
-tar xf ./doctl-1.6.0-darwin-10.6-amd64.tar.gz
-sudo mv ~/doctl /usr/local/bin
+SSH_KEY_NAME="mac" # should already exist at digital ocean
 
-# Generate SSH Keys
-ssh-keygen -t rsa
-
-# Import SSH Keys
-doctl compute ssh-key import k8s-ssh --public-key-file ~/.ssh/id_rsa.pub
-SSH_ID=`doctl compute ssh-key list | grep "k8s-ssh" | cut -d' ' -f1`
+SSH_ID=`doctl compute ssh-key list | grep "$SSH_KEY_NAME" | cut -d' ' -f1`
 SSH_KEY=`doctl compute ssh-key get $SSH_ID --format FingerPrint --no-header`
 
 # Create Tags
@@ -37,11 +31,6 @@ doctl compute droplet create master \
 # Retrieve IP address of Master
 MASTER_ID=`doctl compute droplet list | grep "master" |cut -d' ' -f1`
 MASTER_IP=`doctl compute droplet get $MASTER_ID --format PublicIPv4 --no-header`
-
-# Download Kubectl
-curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/darwin/amd64/kubectl
-chmod +x ./kubectl
-sudo mv ./kubectl /usr/local/bin/kubectl
 
 # Run this after a few minutes. Wait till Kubernetes Master is up and running
 scp root@$MASTER_IP:/etc/kubernetes/admin.conf .
