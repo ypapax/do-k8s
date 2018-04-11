@@ -1,4 +1,6 @@
 #!/bin/bash
+set -ex
+export PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): } $HOSTNAME $ '
 export DEBIAN_FRONTEND=noninteractive
 
 # Replace this with the token

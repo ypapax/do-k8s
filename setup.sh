@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 set -ex
-# Initialize variables
-# Run 'doctl compute region list' for a list of available regions
-REGION=ams3
 
-SSH_KEY_NAME="mac" # should already exist at digital ocean
+
+source ./consts.sh
 
 SSH_ID=`doctl compute ssh-key list | grep "$SSH_KEY_NAME" | cut -d' ' -f1`
 SSH_KEY=`doctl compute ssh-key get $SSH_ID --format FingerPrint --no-header`
@@ -32,7 +30,18 @@ doctl compute droplet create master \
 MASTER_ID=`doctl compute droplet list | grep "master" |cut -d' ' -f1`
 MASTER_IP=`doctl compute droplet get $MASTER_ID --format PublicIPv4 --no-header`
 
-# Run this after a few minutes. Wait till Kubernetes Master is up and running
+
+set +e
+while true; do
+	ssh -o StrictHostKeyChecking=no root@$MASTER_IP kubectl get nodes | grep master
+	if [ $? -eq 0 ]; then
+		break
+	fi
+
+	echo Wait till Kubernetes Master is up and running
+	sleep 15
+done
+set -e
 scp root@$MASTER_IP:/etc/kubernetes/admin.conf .
 
 # Update Script with MASTER_IP
@@ -63,9 +72,17 @@ doctl compute load-balancer create \
 	--tag-name k8s-node \
 	--region $REGION \
 	--health-check protocol:http,port:$NODEPORT,path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3 \
-	--forwarding-rules entry_protocol:TCP,entry_port:80,target_protocol:TCP,target_port:$NODEPORT
+	--forwarding-rules entry_protocol:TCP,entry_port:80,target_protocol:TCP,target_port:$NODEPORT \
+	--wait
 
+while true; do
+	LB_ID=`doctl compute load-balancer list | grep "k8slb" | cut -d' ' -f1`
+	LB_IP=`doctl compute load-balancer get $LB_ID | awk '{ print $2; }' | tail -n +2`
+	if ping ${LB_IP} -c 1; then
+		break
+	fi
+	echo "waiting for load balancer IP"
+	sleep 30
+done
 # Open the Web App in Browser
-LB_ID=`doctl compute load-balancer list | grep "k8slb" | cut -d' ' -f1`
-LB_IP=`doctl compute load-balancer get $LB_ID | awk '{ print $2; }' | tail -n +2`
 open http://$LB_IP
