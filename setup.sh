@@ -12,7 +12,7 @@ doctl compute tag create k8s-master
 doctl compute tag create k8s-node
 
 # Generate token and insert into the script files
-TOKEN=`python -c 'import random; print "%0x.%0x" % (random.SystemRandom().getrandbits(3*8), random.SystemRandom().getrandbits(8*8))'`
+TOKEN=`python ./token.py`
 sed -i.bak "s/^TOKEN=.*/TOKEN=${TOKEN}/" ./master.sh
 sed -i.bak "s/^TOKEN=.*/TOKEN=${TOKEN}/" ./node.sh
 
@@ -39,7 +39,7 @@ while true; do
 	fi
 
 	echo Wait till Kubernetes Master is up and running
-	sleep 15
+	sleep 30
 done
 set -e
 scp root@$MASTER_IP:/etc/kubernetes/admin.conf .
@@ -72,8 +72,7 @@ doctl compute load-balancer create \
 	--tag-name k8s-node \
 	--region $REGION \
 	--health-check protocol:http,port:$NODEPORT,path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3 \
-	--forwarding-rules entry_protocol:TCP,entry_port:80,target_protocol:TCP,target_port:$NODEPORT \
-	--wait
+	--forwarding-rules entry_protocol:TCP,entry_port:80,target_protocol:TCP,target_port:$NODEPORT
 
 while true; do
 	LB_ID=`doctl compute load-balancer list | grep "k8slb" | cut -d' ' -f1`
@@ -82,7 +81,7 @@ while true; do
 		break
 	fi
 	echo "waiting for load balancer IP"
-	sleep 30
+	sleep 60
 done
 # Open the Web App in Browser
 open http://$LB_IP
