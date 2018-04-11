@@ -33,9 +33,8 @@ chown $(id -u):$(id -g) $HOME/admin.conf
 export KUBECONFIG=$HOME/admin.conf
 
 set +e
-kubectl create -f https://github.com/coreos/flannel/blob/master/Documentation/k8s-manifests/kube-flannel-rbac.yml --namespace=kube-system
-kubectl create -f https://github.com/coreos/flannel/blob/master/Documentation/kube-flannel.yml --namespace=kube-system
-kubectl create -f https://github.com/kubernetes/dashboard/blob/master/src/deploy/recommended/kubernetes-dashboard.yaml --namespace=kube-system
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/k8s-manifests/kube-flannel-rbac.yml
 set -e
 
 # Install DigitalOcean monitoring agent
